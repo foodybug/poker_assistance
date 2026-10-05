@@ -1,0 +1,35 @@
+<Window x:Class="PokerAssistant.UI.RegionSelectorOverlay"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="영역 드래그 지정"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="#25000000"
+        WindowState="Maximized"
+        Topmost="True"
+        Cursor="Cross"
+        MouseDown="Window_MouseDown"
+        MouseMove="Window_MouseMove"
+        MouseUp="Window_MouseUp"
+        KeyDown="Window_KeyDown">
+    <Canvas x:Name="OverlayCanvas">
+        <!-- Top Instruction Banner -->
+        <Border Canvas.Left="0" Canvas.Top="30" Width="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ActualWidth}">
+            <Border Background="#E00F172A" CornerRadius="12" Padding="24,14" HorizontalAlignment="Center" BorderBrush="#38BDF8" BorderThickness="1.5">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock x:Name="InstructionTitle" Text="🎯 [영역 이름]을 마우스로 드래그하여 지정하세요" 
+                               FontSize="18" FontWeight="ExtraBold" Foreground="#38BDF8" HorizontalAlignment="Center"/>
+                    <TextBlock Text="마우스를 누른 채 사각형을 그리고 손을 떼면 영역이 저장됩니다. (취소: ESC 키)" 
+                               FontSize="13" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Selection Rubber-band Box -->
+        <Rectangle x:Name="SelectionBox"
+                   Stroke="#38BDF8"
+                   StrokeThickness="2"
+                   Fill="#3038BDF8"
+                   Visibility="Collapsed"/>
+    </Canvas>
+</Window>

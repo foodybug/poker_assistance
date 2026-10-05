@@ -1,0 +1,433 @@
+<Window x:Class="PokerAssistant.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="POKER AI ADVISOR - 넷마블 &amp; 윈조이 실시간 전략 HUD" 
+        Height="880" Width="480"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        Background="Transparent"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        Topmost="True"
+        MouseLeftButtonDown="Window_MouseDown">
+
+    <!-- Outer Container with Glassmorphism Border & Shadow -->
+    <Border Background="#0F131E" CornerRadius="16" BorderBrush="#2A344A" BorderThickness="1.5"
+            MouseLeftButtonDown="Window_MouseDown">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="25" ShadowDepth="8" Opacity="0.75"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- 0. Fixed Top Draggable Title Bar (Always Draggable like standard app) -->
+                <RowDefinition Height="Auto"/>
+                <!-- 1. Scrollable Content Body -->
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 0. Title Bar (Draggable Window Header like a normal program) -->
+            <Border Grid.Row="0" Background="#141926" CornerRadius="15,15,0,0" Padding="14,10,14,10"
+                    BorderBrush="#243048" BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="TitleBar_MouseDown" Cursor="SizeAll">
+                <DockPanel LastChildFill="True">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <Border Background="#3B82F6" Width="26" Height="26" CornerRadius="6" Margin="0,0,8,0">
+                            <TextBlock Text="♠" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="POKER AI HUD" FontSize="16" FontWeight="ExtraBold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                        <Border Background="#1E293B" CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
+                            <TextBlock Text="v1.2 LIVE" FontSize="10" FontWeight="Bold" Foreground="#38BDF8"/>
+                        </Border>
+                        <TextBlock Text="✥ 드래그하여 이동" FontSize="10" Foreground="#64748B" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="TopmostBtn" Content="📌" ToolTip="항상 위에 고정" Width="28" Height="28" 
+                                Background="#1E293B" Foreground="#38BDF8" BorderThickness="0" Margin="2,0" Cursor="Hand" Click="Topmost_Click"/>
+                        <Button Content="⚙️" ToolTip="전체 영역 캘리브레이션 창" Width="28" Height="28" 
+                                Background="#1E293B" Foreground="#94A3B8" BorderThickness="0" Margin="2,0" Cursor="Hand" Click="Calibration_Click"/>
+                        <Button Content="—" ToolTip="최소화" Width="28" Height="28" 
+                                Background="#1E293B" Foreground="#94A3B8" BorderThickness="0" Margin="2,0" Cursor="Hand" Click="Minimize_Click"/>
+                        <Button Content="✕" ToolTip="닫기" Width="28" Height="28" 
+                                Background="#1E293B" Foreground="#EF4444" BorderThickness="0" Margin="2,0" Cursor="Hand" Click="Close_Click"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- 1. Scrollable Content Area -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="16,12,16,16">
+                    <Grid.RowDefinitions>
+                        <!-- 1. Platform & Target Window & Auto Turn Detection -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 2. [신설] 4대 기준 영역 마우스 직접 지정 바 -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 3. [강화] 실시간 4대 영역 뷰어 (Live Region Inspector) -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 4. Cards Display (Hero Hand & Board) & Card Status -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 5. Main Action Recommender -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 6. Equity & Pot Odds Visual Bars -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 7. Tactical Analysis Text -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- 8. Pot / Position Adjusters & Footer -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                <!-- 1. Platform & Target Window & Auto Turn Detection Status -->
+                <Border Grid.Row="1" Background="#161D2C" CornerRadius="10" Padding="12,10" Margin="0,0,0,10" BorderBrush="#243048" BorderThickness="1">
+                    <StackPanel>
+                        <!-- Platform Selector & Toggles (Auto Start & Auto Turn) -->
+                        <DockPanel Margin="0,0,0,8">
+                            <ComboBox x:Name="PlatformComboBox" Width="140" Height="26" 
+                                      Background="#1E293B" Foreground="Black" FontWeight="SemiBold">
+                                <ComboBoxItem Content="넷마블 포커 (Netmarble)"/>
+                                <ComboBoxItem Content="윈조이 포커 (Winjoy / WPL)" IsSelected="True"/>
+                                <ComboBoxItem Content="사용자 정의 (Custom)"/>
+                            </ComboBox>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="🚀 자동실행" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <CheckBox x:Name="AutoStartCheck" VerticalAlignment="Center" Cursor="Hand" Margin="0,0,8,0" ToolTip="윈도우 부팅 시 Poker Assistant가 자동 실행되도록 설정합니다."/>
+                                <TextBlock Text="자동 턴 감지" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <CheckBox x:Name="AutoDetectCheck" IsChecked="True" VerticalAlignment="Center" Cursor="Hand"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Target Window Selector & Pick Button -->
+                        <DockPanel Margin="0,0,0,8">
+                            <Button x:Name="PickWindowBtn" Content="🎯 창 찍기" ToolTip="화면의 포커 게임 창을 클릭하여 즉시 지정" Width="72" Height="26"
+                                    Background="#2563EB" Foreground="White" FontSize="10" FontWeight="Bold" BorderThickness="0" Margin="4,0,0,0" DockPanel.Dock="Right" Cursor="Hand" Click="PickWindow_Click"/>
+                            <Button x:Name="RefreshWindowsBtn" Content="🔄" ToolTip="창 목록 새로고침" Width="26" Height="26"
+                                    Background="#334155" Foreground="White" BorderThickness="0" Margin="4,0,0,0" DockPanel.Dock="Right" Cursor="Hand" Click="RefreshWindows_Click"/>
+                            <ComboBox x:Name="TargetWindowComboBox" Height="26" Background="#1E293B" Foreground="Black" FontSize="11"/>
+                        </DockPanel>
+
+                        <!-- Sensitivity Setting & Live Activity Meter -->
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="감도:" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <ComboBox x:Name="SensitivityComboBox" Width="105" Height="22" Background="#1E293B" Foreground="Black" FontSize="10">
+                                <ComboBoxItem Content="매우 민감 (1.0%)"/>
+                                <ComboBoxItem Content="민감 (2.0%)" IsSelected="True"/>
+                                <ComboBoxItem Content="보통 (3.5%)"/>
+                                <ComboBoxItem Content="안정 (5.0%)"/>
+                            </ComboBox>
+                            <TextBlock x:Name="ActivityScoreText" Text="활동도: 0.0% / 기준: 2.0%" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" 
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </DockPanel>
+
+                        <!-- Activity Progress Bar -->
+                        <ProgressBar x:Name="ActivityProgressBar" Height="5" Maximum="10" Value="0" 
+                                     Foreground="#38BDF8" Background="#1F2937" BorderThickness="0" Margin="0,0,0,6"/>
+
+                        <!-- ⏱️ 1초 주기 자동 갱신 상태 바 -->
+                        <Border Background="#0C1A30" CornerRadius="6" Padding="8,5" Margin="0,0,0,6" BorderBrush="#1D4ED8" BorderThickness="1">
+                            <DockPanel>
+                                <Ellipse x:Name="PeriodicPulseDot" Width="8" Height="8" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="PeriodicStatusText" Text="⏱️ 1초 주기 자동 갱신 동작 중 (보드·내카드·확률)" 
+                                           FontSize="11" FontWeight="Bold" Foreground="#34D399" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="1초 자동갱신" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <CheckBox x:Name="PeriodicUpdateCheck" IsChecked="True" VerticalAlignment="Center" Cursor="Hand" 
+                                              Checked="PeriodicUpdateCheck_Changed" Unchecked="PeriodicUpdateCheck_Changed"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Real-time Turn Status Badge -->
+                        <Border x:Name="TurnStatusBorder" Background="#1F2937" CornerRadius="6" Padding="8,5">
+                            <DockPanel>
+                                <Ellipse x:Name="TurnPulseDot" Width="10" Height="10" Fill="#6B7280" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TurnStatusText" Text="대기 중 (하단 중앙 타이머 감시 중)" 
+                                           FontSize="11" FontWeight="Bold" Foreground="#9CA3AF" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="GaugePercentText" Text="감시 중" FontSize="10" Foreground="#6B7280" 
+                                           DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. [신설] 4대 기준 영역 마우스 직접 지정 바 (Drag Zone Setters) -->
+                <Border Grid.Row="2" Background="#161D2C" CornerRadius="10" Padding="12,10" Margin="0,0,0,10" BorderBrush="#3B82F6" BorderThickness="1.2">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,6">
+                            <TextBlock Text="🎯 영역 직접 지정 (마우스로 화면 드래그)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8"/>
+                            <TextBlock Text="원하는 버튼을 누르고 게임 화면을 드래그하세요" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <UniformGrid Rows="1" Columns="4">
+                            <Button Content="🎴 내 카드 지정" Background="#1D4ED8" Foreground="White" FontWeight="Bold" FontSize="11"
+                                    Height="30" Margin="2,0" BorderThickness="0" Cursor="Hand" Click="SetHeroRegion_Click"/>
+                            <Button Content="🃏 보드 지정" Background="#059669" Foreground="White" FontWeight="Bold" FontSize="11"
+                                    Height="30" Margin="2,0" BorderThickness="0" Cursor="Hand" Click="SetBoardRegion_Click"/>
+                            <Button Content="⏱️ 타이머 지정" Background="#DC2626" Foreground="White" FontWeight="Bold" FontSize="11"
+                                    Height="30" Margin="2,0" BorderThickness="0" Cursor="Hand" Click="SetTimerRegion_Click"/>
+                            <Button Content="💰 팟 영역 지정" Background="#D97706" Foreground="White" FontWeight="Bold" FontSize="11"
+                                    Height="30" Margin="2,0" BorderThickness="0" Cursor="Hand" Click="SetPotRegion_Click"/>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. [강화] 실시간 4대 영역 모니터 뷰어 (Live Region Inspector) -->
+                <Border Grid.Row="3" Background="#161D2C" CornerRadius="10" Padding="12,10" Margin="0,0,0,10" BorderBrush="#243048" BorderThickness="1">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,6">
+                            <TextBlock Text="📷 실시간 영역 뷰어 (프로그램이 지금 보고 있는 실제 화면)" FontSize="11" FontWeight="Bold" Foreground="#A78BFA"/>
+                            <Button Content="🔄 새로고침" FontSize="10" Background="Transparent" Foreground="#38BDF8" BorderThickness="0" Cursor="Hand" Click="RefreshInspectors_Click"/>
+                        </DockPanel>
+
+                        <!-- 2x2 Grid of Live Captures -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Hero Cards Live Crop -->
+                            <Border Grid.Row="0" Grid.Column="0" Background="#090D16" CornerRadius="6" Padding="6,4" Margin="2" BorderBrush="#1D4ED8" BorderThickness="1">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,2">
+                                        <TextBlock Text="🎴 내 카드 캡처" FontSize="10" FontWeight="Bold" Foreground="#60A5FA"/>
+                                        <Button Content="재지정" FontSize="9" Padding="4,1" Background="#1E293B" Foreground="#93C5FD" BorderThickness="0" Cursor="Hand" Click="SetHeroRegion_Click" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <Border Height="36" Background="#020617" CornerRadius="4" ClipToBounds="True">
+                                        <Image x:Name="HeroPreviewImage" Stretch="Uniform" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="HeroInspectText" Text="카드 감시 중" FontSize="9" Foreground="#94A3B8" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Board Cards Live Crop -->
+                            <Border Grid.Row="0" Grid.Column="1" Background="#090D16" CornerRadius="6" Padding="6,4" Margin="2" BorderBrush="#059669" BorderThickness="1">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,2">
+                                        <TextBlock Text="🃏 보드 카드 캡처" FontSize="10" FontWeight="Bold" Foreground="#34D399"/>
+                                        <Button Content="재지정" FontSize="9" Padding="4,1" Background="#1E293B" Foreground="#A7F3D0" BorderThickness="0" Cursor="Hand" Click="SetBoardRegion_Click" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <Border Height="36" Background="#020617" CornerRadius="4" ClipToBounds="True">
+                                        <Image x:Name="BoardPreviewImage" Stretch="Uniform" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="BoardInspectText" Text="보드 감시 중" FontSize="9" Foreground="#94A3B8" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Timer Gauge Live Crop -->
+                            <Border Grid.Row="1" Grid.Column="0" Background="#090D16" CornerRadius="6" Padding="6,4" Margin="2" BorderBrush="#DC2626" BorderThickness="1">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,2">
+                                        <TextBlock Text="⏱️ 타이머/게이지" FontSize="10" FontWeight="Bold" Foreground="#F87171"/>
+                                        <Button Content="재지정" FontSize="9" Padding="4,1" Background="#1E293B" Foreground="#FECACA" BorderThickness="0" Cursor="Hand" Click="SetTimerRegion_Click" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <Border Height="36" Background="#020617" CornerRadius="4" ClipToBounds="True">
+                                        <Image x:Name="GaugePreviewImage" Stretch="Uniform" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="TimerInspectText" Text="하단 중앙 게이지" FontSize="9" Foreground="#94A3B8" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Pot Amount Live Crop -->
+                            <Border Grid.Row="1" Grid.Column="1" Background="#090D16" CornerRadius="6" Padding="6,4" Margin="2" BorderBrush="#D97706" BorderThickness="1">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,2">
+                                        <TextBlock Text="💰 팟 금액 영역" FontSize="10" FontWeight="Bold" Foreground="#FBBF24"/>
+                                        <Button Content="재지정" FontSize="9" Padding="4,1" Background="#1E293B" Foreground="#FDE68A" BorderThickness="0" Cursor="Hand" Click="SetPotRegion_Click" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <Border Height="36" Background="#020617" CornerRadius="4" ClipToBounds="True">
+                                        <Image x:Name="PotPreviewImage" Stretch="Uniform" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="PotInspectText" Text="팟 금액 감시 중" FontSize="9" Foreground="#94A3B8" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Cards Display (Hero Hand & Board) & Card Status -->
+                <Border Grid.Row="4" Background="#161D2C" CornerRadius="10" Padding="12" Margin="0,0,0,10" BorderBrush="#243048" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Top Status & Manual Re-read Button -->
+                        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock x:Name="HeroCardStatusText" Text="내 카드 상태: 감시 중" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
+                            <Button Content="⚡ 카드 다시 읽기" FontSize="10" FontWeight="Bold" Padding="8,3" Background="#3B82F6" Foreground="White" 
+                                    BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right" Click="RereadCards_Click"/>
+                        </DockPanel>
+
+                        <!-- Cards Containers -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Hero Hand (2 cards) -->
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <DockPanel Margin="0,0,0,6">
+                                    <TextBlock Text="내 카드 (Hero)" FontSize="11" FontWeight="Bold" Foreground="#38BDF8"/>
+                                    <Button Content="직접선택" FontSize="10" Background="Transparent" Foreground="#60A5FA" 
+                                            BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right" Click="ChangeHeroCards_Click"/>
+                                </DockPanel>
+                                <StackPanel x:Name="HeroCardsPanel" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Community Cards (Flop, Turn, River) -->
+                            <StackPanel Grid.Column="1">
+                                <DockPanel Margin="0,0,0,6">
+                                    <TextBlock Text="보드 카드 (Community)" FontSize="11" FontWeight="Bold" Foreground="#4ADE80"/>
+                                    <Button Content="직접선택" FontSize="10" Background="Transparent" Foreground="#4ADE80" 
+                                            BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right" Click="ChangeBoardCards_Click"/>
+                                </DockPanel>
+                                <StackPanel x:Name="BoardCardsPanel" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- 5. Massive Action Recommendation Badge -->
+                <Border Grid.Row="5" x:Name="ActionBadgeBorder" Background="#1E1B4B" CornerRadius="12" Padding="16,14" Margin="0,0,0,10" BorderBrush="#6366F1" BorderThickness="2">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0">
+                            <TextBlock x:Name="ActionTypeText" Text="🚀 하프 레이즈 (RAISE)" FontSize="22" FontWeight="ExtraBold" Foreground="#C084FC" VerticalAlignment="Center"/>
+                            <Border x:Name="EvChipBorder" Background="#064E3B" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right">
+                                <TextBlock x:Name="EvChipText" Text="EV +340" FontSize="12" FontWeight="Bold" Foreground="#34D399"/>
+                            </Border>
+                        </DockPanel>
+
+                        <DockPanel Grid.Row="1" Margin="0,6,0,0">
+                            <TextBlock Text="권장 사이즈:" FontSize="12" Foreground="#94A3B8" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="BetSizeText" Text="팟의 50% (하프)" FontSize="13" FontWeight="Bold" Foreground="#F1F5F9"/>
+                            <TextBlock x:Name="HeroHandTitleText" Text="[원 페어 A]" FontSize="12" FontWeight="SemiBold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
+                        </DockPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 6. Equity vs Pot Odds Visual Bar -->
+                <Border Grid.Row="6" Background="#161D2C" CornerRadius="10" Padding="12,10" Margin="0,0,0,10" BorderBrush="#243048" BorderThickness="1">
+                    <StackPanel>
+                        <!-- Equity Bar -->
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="에퀴티 (승률)" FontSize="12" FontWeight="Bold" Foreground="#34D399"/>
+                            <TextBlock x:Name="EquityText" Text="58.2%" FontSize="13" FontWeight="ExtraBold" Foreground="#34D399" HorizontalAlignment="Right"/>
+                        </DockPanel>
+                        <ProgressBar x:Name="EquityProgressBar" Height="10" Value="58.2" Maximum="100" 
+                                     Foreground="#10B981" Background="#1F2937" BorderThickness="0" Margin="0,0,0,8"/>
+
+                        <!-- Pot Odds Bar -->
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="요구 팟 오즈" FontSize="12" FontWeight="Bold" Foreground="#F59E0B"/>
+                            <TextBlock x:Name="PotOddsText" Text="28.6%" FontSize="13" FontWeight="ExtraBold" Foreground="#F59E0B" HorizontalAlignment="Right"/>
+                        </DockPanel>
+                        <ProgressBar x:Name="PotOddsProgressBar" Height="8" Value="28.6" Maximum="100" 
+                                     Foreground="#F59E0B" Background="#1F2937" BorderThickness="0" Margin="0,0,0,8"/>
+
+                        <!-- Win / Tie / Loss / Outs Chips -->
+                        <UniformGrid Rows="1" Columns="4" Margin="0,2,0,0">
+                            <Border Background="#1E293B" CornerRadius="6" Padding="4,4" Margin="2,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="승 (Win)" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="WinRateText" Text="54.1%" FontSize="12" FontWeight="Bold" Foreground="#F1F5F9" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#1E293B" CornerRadius="6" Padding="4,4" Margin="2,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="무 (Tie)" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="TieRateText" Text="8.2%" FontSize="12" FontWeight="Bold" Foreground="#F1F5F9" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#1E293B" CornerRadius="6" Padding="4,4" Margin="2,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="패 (Loss)" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="LossRateText" Text="37.7%" FontSize="12" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#1E293B" CornerRadius="6" Padding="4,4" Margin="2,0">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="아웃츠" FontSize="10" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="OutsText" Text="9개" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 7. Tactical Analysis Text Box -->
+                <Border Grid.Row="7" Background="#161D2C" CornerRadius="10" Padding="12" Margin="0,0,0,10" BorderBrush="#243048" BorderThickness="1">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,6">
+                            <TextBlock Text="🧠 실시간 전술 분석 가이드" FontSize="12" FontWeight="Bold" Foreground="#A78BFA"/>
+                            <TextBlock x:Name="BoardTextureText" Text="투 톤 보드" FontSize="11" Foreground="#94A3B8" HorizontalAlignment="Right"/>
+                        </DockPanel>
+                        <TextBlock x:Name="TacticalReasonText" TextWrapping="Wrap" FontSize="12" LineHeight="18" Foreground="#E2E8F0"
+                                   Text="에퀴티 58.2%가 요구 팟오즈 28.6%를 크게 상회하여 높은 기대값(+EV)을 갖습니다. 9아웃츠 넛 플러시 드로우를 보유하고 있으므로 주도권을 유지하고 상대의 폴드를 유도하기 위해 하프 레이즈를 적극 추천합니다."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 8. Pot / Position / Manual Trigger Footer -->
+                <Border Grid.Row="8" Background="#161D2C" CornerRadius="10" Padding="12,10" BorderBrush="#243048" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Pot Size Input -->
+                            <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                                <TextBlock Text="팟 크기" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,2"/>
+                                <TextBox x:Name="PotSizeInput" Text="2400" Background="#1E293B" Foreground="White" 
+                                         BorderThickness="0" Padding="6,4" TextChanged="PotSettings_Changed"/>
+                            </StackPanel>
+
+                            <!-- Call Amount Input -->
+                            <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                <TextBlock Text="콜 금액" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,2"/>
+                                <TextBox x:Name="CallAmountInput" Text="400" Background="#1E293B" Foreground="White" 
+                                         BorderThickness="0" Padding="6,4" TextChanged="PotSettings_Changed"/>
+                            </StackPanel>
+
+                            <!-- Position Select -->
+                            <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                <TextBlock Text="포지션" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,2"/>
+                                <ComboBox x:Name="PositionComboBox" Background="#1E293B" Foreground="Black" Height="26">
+                                    <ComboBoxItem Content="BTN" IsSelected="True"/>
+                                    <ComboBoxItem Content="SB"/>
+                                    <ComboBoxItem Content="BB"/>
+                                    <ComboBoxItem Content="UTG"/>
+                                    <ComboBoxItem Content="MP"/>
+                                    <ComboBoxItem Content="CO"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Manual Trigger Button (F2) -->
+                        <Button Grid.Row="1" Content="⚡ 지금 즉시 캡처 &amp; 분석 (F2)" 
+                                Background="#3B82F6" Foreground="White" FontWeight="Bold" FontSize="13"
+                                Padding="0,8" BorderThickness="0" Cursor="Hand" Click="ManualCapture_Click"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Border>
+</Window>
